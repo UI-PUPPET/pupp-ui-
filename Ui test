@@ -1,0 +1,185 @@
+local MyUI = {}
+
+local UIS = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+local function Draggable(Frame, DragHandle)
+    local Dragging, DragInput, StartPos, StartDelta
+    DragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Dragging = true
+            StartPos = Frame.Position
+            StartDelta = input.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    Dragging = false
+                end
+            end)
+        end
+    end)
+    DragHandle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            DragInput = input
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input == DragInput and Dragging then
+            local Delta = input.Position - StartDelta
+            Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X,
+                StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+        end
+    end)
+end
+
+function MyUI:CreateWindow(title, icon)
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.ResetOnSpawn = false
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(.45, 0, .55, 0)
+    MainFrame.Position = UDim2.new(.28, 0, .23, 0)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
+
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1,0,0,35)
+    TopBar.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    TopBar.Parent = MainFrame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(.8,0,1,0)
+    Title.Position = UDim2.new(.05,0,0,0)
+    Title.Text = "  "..title
+    Title.TextColor3 = Color3.fromRGB(255,255,255)
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.BackgroundTransparency = 1
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 16
+    Title.Parent = TopBar
+
+    local HideButton = Instance.new("TextButton")
+    HideButton.Size = UDim2.new(.1,0,.9,0)
+    HideButton.Position = UDim2.new(.9,0,.05,0)
+    HideButton.Text = "-"
+    HideButton.TextColor3 = Color3.fromRGB(255,255,255)
+    HideButton.BackgroundColor3 = Color3.fromRGB(50,0,0)
+    HideButton.Font = Enum.Font.GothamBold
+    HideButton.TextSize = 18
+    HideButton.Parent = TopBar
+
+    local Hidden = false
+    HideButton.MouseButton1Click:Connect(function()
+        Hidden = not Hidden
+        for _,v in pairs(MainFrame:GetChildren()) do
+            if v ~= TopBar then
+                v.Visible = not Hidden
+            end
+        end
+    end)
+
+    local TabsFrame = Instance.new("ScrollingFrame")
+    TabsFrame.Size = UDim2.new(.25,0,.93,0)
+    TabsFrame.Position = UDim2.new(0,0,.07,0)
+    TabsFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    TabsFrame.ScrollBarThickness = 4
+    TabsFrame.Parent = MainFrame
+
+    local LayoutTabs = Instance.new("UIListLayout")
+    LayoutTabs.Parent = TabsFrame
+    LayoutTabs.Padding = UDim.new(0,5)
+    LayoutTabs.SortOrder = Enum.SortOrder.LayoutOrder
+
+    local Pages = Instance.new("Folder")
+    Pages.Name = "Pages"
+    Pages.Parent = MainFrame
+
+    Draggable(MainFrame, TopBar)
+
+    local Window = {}
+    Window.Tabs = {}
+
+    function Window:CreateTab(name)
+        local TabButton = Instance.new("TextButton")
+        TabButton.Size = UDim2.new(.95, 0, 0, 30)
+        TabButton.Text = name
+        TabButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
+        TabButton.TextColor3 = Color3.fromRGB(255,255,255)
+        TabButton.Font = Enum.Font.GothamMedium
+        TabButton.TextSize = 14
+        TabButton.Parent = TabsFrame
+
+        local Page = Instance.new("ScrollingFrame")
+        Page.Size = UDim2.new(.70,0,.93,0)
+        Page.Position = UDim2.new(.28,0,.07,0)
+        Page.BackgroundColor3 = Color3.fromRGB(20,20,20)
+        Page.ScrollBarThickness = 4
+        Page.Visible = false
+        Page.Parent = Pages
+
+        local Layout = Instance.new("UIListLayout")
+        Layout.Parent = Page
+        Layout.Padding = UDim.new(0,6)
+        Layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+        local Tab = {}
+        Tab.Page = Page
+
+        function Tab:Show()
+            for _,p in pairs(Pages:GetChildren()) do p.Visible = false end
+            Page.Visible = true
+        end
+
+        TabButton.MouseButton1Click:Connect(function()
+            Tab:Show()
+        end)
+
+        function Tab:AddLabel(text)
+            local L = Instance.new("TextLabel")
+            L.Size = UDim2.new(1,-10,0,25)
+            L.BackgroundColor3 = Color3.fromRGB(40,40,40)
+            L.TextColor3 = Color3.fromRGB(255,255,255)
+            L.Text = text
+            L.Font = Enum.Font.GothamSemibold
+            L.Parent = Page
+        end
+
+        function Tab:AddButton(text, callback)
+            local B = Instance.new("TextButton")
+            B.Size = UDim2.new(1,-10,0,30)
+            B.BackgroundColor3 = Color3.fromRGB(60,60,60)
+            B.TextColor3 = Color3.fromRGB(255,255,255)
+            B.Text = text
+            B.Font = Enum.Font.GothamBold
+            B.Parent = Page
+            B.MouseButton1Click:Connect(callback)
+        end
+
+        function Tab:AddToggle(text, callback)
+            local Toggle = Instance.new("TextButton")
+            Toggle.Size = UDim2.new(1,-10,0,30)
+            Toggle.BackgroundColor3 = Color3.fromRGB(60,60,60)
+            Toggle.TextColor3 = Color3.fromRGB(255,255,255)
+            Toggle.Font = Enum.Font.GothamBold
+            Toggle.Text = text.." : OFF"
+            Toggle.Parent = Page
+
+            local state = false
+            Toggle.MouseButton1Click:Connect(function()
+                state = not state
+                Toggle.Text = text.." : "..(state and "ON" or "OFF")
+                callback(state)
+            end)
+        end
+
+        table.insert(Window.Tabs, Tab)
+        return Tab
+    end
+
+    return Window
+end
+
+return MyUI
